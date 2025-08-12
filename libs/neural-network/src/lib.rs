@@ -164,4 +164,86 @@ mod tests {
             .as_ref()
         );
     }
+
+    // Tests for Network
+    #[test]
+    fn random_network() {
+        let mut rng = ChaCha8Rng::from_seed(Default::default());
+        let network = Network::random(
+            &mut rng,
+            &[
+                LayerTopology { neurons: 4 },
+                LayerTopology { neurons: 3 },
+                LayerTopology { neurons: 2 },
+            ],
+        );
+
+        println!("{:?}", network);
+        assert_relative_eq!(network.layers[0].neurons[0].bias, -0.6255188);
+        assert_relative_eq!(network.layers[0].neurons[1].bias, -0.5351684);
+        assert_relative_eq!(network.layers[0].neurons[2].bias, -0.19277143);
+
+        assert_relative_eq!(network.layers[1].neurons[0].bias, -0.4766221);
+        assert_relative_eq!(network.layers[1].neurons[1].bias, 0.35662675);
+
+        assert_relative_eq!(
+            network.layers[0].neurons[0].weights.as_slice(),
+            [0.67383933, 0.81812596, 0.26284885, 0.5238805].as_ref()
+        );
+        assert_relative_eq!(
+            network.layers[0].neurons[1].weights.as_slice(),
+            [0.069369555, -0.7648182, -0.102499485, -0.48879623].as_ref()
+        );
+        assert_relative_eq!(
+            network.layers[0].neurons[2].weights.as_slice(),
+            [-0.8020501, 0.27546048, -0.98680043, 0.4452355].as_ref()
+        );
+
+        assert_relative_eq!(
+            network.layers[1].neurons[0].weights.as_slice(),
+            [-0.89078736, -0.36127806, -0.14956546].as_ref()
+        );
+        assert_relative_eq!(
+            network.layers[1].neurons[1].weights.as_slice(),
+            [-0.8566594, 0.3330984, 0.11767411].as_ref(),
+        );
+    }
+
+    #[test]
+    fn propagate_network() {
+        let network = Network {
+            layers: vec![
+                Layer {
+                    neurons: vec![
+                        Neuron {
+                            bias: 0.5,
+                            weights: vec![-0.3, 0.8],
+                        },
+                        Neuron {
+                            bias: 0.2,
+                            weights: vec![0.2, -0.4],
+                        },
+                    ],
+                },
+                Layer {
+                    neurons: vec![Neuron {
+                        bias: 0.4,
+                        weights: vec![-0.7, 0.9],
+                    }],
+                },
+            ],
+        };
+
+        assert_relative_eq!(
+            network.propagate(vec!(10.0, 10.0)).as_slice(),
+            [0.0].as_ref()
+        );
+        assert_relative_eq!(
+            network.propagate(vec!(-0.7, -0.8)).as_slice(),
+            [(((-0.3 * -0.7) + (0.8 * -0.8) + 0.5) * -0.7)
+                + (((0.2 * -0.7) + (-0.4 * -0.8) + 0.2) * 0.9)
+                + 0.4]
+            .as_ref()
+        );
+    }
 }
