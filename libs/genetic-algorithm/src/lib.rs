@@ -1,11 +1,14 @@
+use std::ops::Index;
+
 use rand::seq::{IndexedMutRandom, IndexedRandom, SliceRandom};
 use rand::{Rng, RngCore};
 
 pub trait Individual {
-    fn fitness(&self) -> f32 {
-        todo!()
-    }
+    fn fitness(&self) -> f32;
+    fn chromosome(&self) -> &Chromosome;
 }
+
+// ---------- Selection Process ------------
 
 pub trait SelectionMethod {
     fn select<'a, I>(&self, rng: &mut dyn RngCore, population: &'a [I]) -> &'a I
@@ -26,10 +29,105 @@ impl SelectionMethod for RouletteWheelSelection {
     }
 }
 
-pub struct GeneticAlgorithm {}
+// ---------- Crossover Process ------------
 
-impl GeneticAlgorithm {
-    pub fn evolve<I>(&self, population: &[I]) -> Vec<I>
+#[derive(Debug)] // NOTE: intentionall left out Clone to see what will happen
+pub struct Chromosome {
+    genes: Vec<f32>,
+}
+
+impl Chromosome {
+    pub fn len(&self) -> usize {
+        self.genes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.genes.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &f32> {
+        self.genes.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut f32> {
+        self.genes.iter_mut()
+    }
+}
+
+// Allows us to index from our Chromosome -> chromosome["hello!"]
+impl Index<usize> for Chromosome {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.genes[index]
+    }
+}
+
+// Allows us to convert (collect) an iterator of Type into some other thing. In this case f32s into a Chromosome
+impl FromIterator<f32> for Chromosome {
+    fn from_iter<T: IntoIterator<Item = f32>>(iter: T) -> Self {
+        Self {
+            genes: iter.into_iter().collect(),
+        }
+    }
+}
+
+// Allows us to convert a type into an iterator (convert Chromosome into an iterator of its genes)
+impl IntoIterator for Chromosome {
+    type Item = f32;
+    type IntoIter = std::vec::IntoIter<f32>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.genes.into_iter()
+    }
+}
+
+pub trait CrossoverMethod {
+    fn crossover(
+        &self,
+        rng: &mut dyn RngCore,
+        parent_a: &Chromosome,
+        parent_b: &Chromosome,
+    ) -> Chromosome;
+}
+
+#[derive(Clone, Debug)]
+pub struct UniformCrossover;
+
+impl CrossoverMethod for UniformCrossover {
+    fn crossover(
+        &self,
+        rng: &mut dyn RngCore,
+        parent_a: &Chromosome,
+        parent_b: &Chromosome,
+    ) -> Chromosome {
+        assert_eq!(parent_a.len(), parent_b.len());
+
+        parent_a
+            .iter()
+            .zip(parent_b.iter())
+            .map(|(&a, &b)| if rng.random_bool(0.5) { a } else { b })
+            .collect()
+    }
+}
+
+pub struct GeneticAlgorithm<S> {
+    selection_method: S,
+    crossover_method: Box<dyn CrossoverMethod>,
+}
+
+impl<S> GeneticAlgorithm<S>
+where
+    S: SelectionMethod,
+{
+    pub fn new(selection_method: S, crossover_method: impl CrossoverMethod + 'static) -> Self {
+        Self {
+            selection_method,
+            crossover_method: Box::new(crossover_method),
+        }
+    }
+
+    pub fn evolve<I>(&self, rng: &mut dyn RngCore, population: &[I]) -> Vec<I>
     where
         I: Individual,
     {
@@ -37,8 +135,9 @@ impl GeneticAlgorithm {
 
         (0..population.len())
             .map(|_| {
-                // TODO: Selection
-                // TODO: Crossover
+                let parent_a = self.selection_method.select(rng, population).chromosome();
+                let parent_b = self.selection_method.select(rng, population).chromosome();
+                let mut child = self.crossover_method.crossover(rng, parent_a, parent_b);
                 // TODO: Mutation
                 todo!()
             })
@@ -69,6 +168,10 @@ mod tests {
         fn fitness(&self) -> f32 {
             self.fitness
         }
+
+        fn chromosome(&self) -> &Chromosome {
+            panic!("not supported for a test individual!")
+        }
     }
 
     #[test]
@@ -95,5 +198,19 @@ mod tests {
         let expected_histogram = BTreeMap::from_iter([(1, 98), (2, 202), (3, 278), (4, 422)]);
 
         assert_eq!(actual_histogram, expected_histogram);
+    }
+
+    #[test]
+    fn uniform_crossover() {
+        let mut rng = ChaCha8Rng::from_seed(Default::default());
+        let parent_a: Chromosome = (1..=100).map(|n| n as f32).collect();
+        let parent_b: Chromosome = (1..=100).map(|n| -n as f32).collect();
+        let child = UniformCrossover.crossover(&mut rng, &parent_a, &parent_b);
+
+        let diff_a = child.iter().zip(parent_a).filter(|(c, p)| *c != p).count();
+        let diff_b = child.iter().zip(parent_b).filter(|(c, p)| *c != p).count();
+
+        assert_eq!(diff_a, 49);
+        assert_eq!(diff_b, 51);
     }
 }
