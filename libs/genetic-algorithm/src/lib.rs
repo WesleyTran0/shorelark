@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use rand::seq::IndexedRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 use rand::{Rng, RngCore};
 
 pub trait Individual {
@@ -111,6 +111,57 @@ impl CrossoverMethod for UniformCrossover {
             .iter()
             .zip(parent_b.iter())
             .map(|(&a, &b)| if rng.random_bool(0.5) { a } else { b })
+            .collect()
+    }
+}
+
+// ---------- Another Crossover Method ------------
+
+#[derive(Clone, Debug)]
+pub struct KPointCrossover {
+    /// the number of cross over points where the gene will be chosen
+    k: usize,
+}
+
+/// Normally, a KPointCrossover would result in two offspring, where they are opposites of one
+/// another. To conform to the single offspring standard set by trait CrossoverMethod, we instead
+/// are choosing one of the offspring to return at random.
+impl CrossoverMethod for KPointCrossover {
+    fn crossover(
+        &self,
+        rng: &mut dyn RngCore,
+        parent_a: &Chromosome,
+        parent_b: &Chromosome,
+    ) -> Chromosome {
+        assert_eq!(parent_a.len(), parent_b.len());
+
+        let num_pts = if self.k > parent_a.len() - 1 {
+            parent_a.len() - 1
+        } else {
+            self.k
+        };
+
+        // creates a set of crossover points
+        let mut pts: Vec<usize> = (1..parent_a.len()).collect();
+        pts.shuffle(rng);
+        pts.truncate(num_pts);
+        pts.sort();
+
+        let (first_parent, second_parent) = if rng.random_bool(0.5) {
+            (parent_a, parent_b)
+        } else {
+            (parent_b, parent_a)
+        };
+
+        first_parent
+            .iter()
+            .zip(second_parent.iter())
+            .enumerate()
+            .map(|(idx, (&a, &b))| {
+                let crossovers_before = pts.partition_point(|&p| p <= idx);
+
+                if crossovers_before % 2 == 0 { a } else { b }
+            })
             .collect()
     }
 }
