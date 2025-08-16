@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-use rand::seq::{IndexedMutRandom, IndexedRandom, SliceRandom};
+use rand::seq::IndexedRandom;
 use rand::{Rng, RngCore};
 
 pub trait Individual {
@@ -384,11 +384,12 @@ mod tests {
             }
 
             mod and_nonzero_coefficient {
+                #[test]
                 fn slightly_changes_the_original_chromosome() {
                     use super::*;
 
                     let actual = actual(1.7);
-                    let expected = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+                    let expected = vec![1.0, 1.2371246, 3.0, 4.542914, 5.0];
 
                     assert_relative_eq!(actual.as_slice(), expected.as_slice())
                 }
