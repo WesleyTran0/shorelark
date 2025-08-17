@@ -373,6 +373,23 @@ mod tests {
         assert_eq!(diff_b, 51);
     }
 
+    #[test]
+    fn kpoint_crossover() {
+        let mut rng = ChaCha8Rng::from_seed(Default::default());
+        let parent_a: Chromosome = (1..=100).map(|n| n as f32).collect();
+        let parent_b: Chromosome = (1..=100).map(|n| -n as f32).collect();
+        let kpoint_crossover = KPointCrossover { k: 75 };
+        let child = kpoint_crossover.crossover(&mut rng, &parent_a, &parent_b);
+
+        let switches = child
+            .iter()
+            .zip(child.iter().skip(1))
+            .filter(|(a, b)| a.signum() != b.signum())
+            .count();
+
+        assert_eq!(switches, 75)
+    }
+
     mod gaussian_mutation {
         use super::*;
 
