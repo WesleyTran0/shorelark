@@ -1,0 +1,1 @@
+std::iter::Map<std::slice::Iter<'_, lib_simulation::Animal>, fn(Animal) -> Animal {<Animal as std::convert::From<Animal>>::from}>

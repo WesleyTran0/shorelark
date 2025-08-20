@@ -1,0 +1,15 @@
+[package]
+name = "lib-simulation-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wasm-bindgen = "*"
+rand = "*"
+getrandom = { version = "*", features = ["wasm_js"] }
+
+lib-simulation = { path = "../simulation" }
+
+
+[lib]
+crate-type = ["cdylib"]

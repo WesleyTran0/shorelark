@@ -1,0 +1,1 @@
+for<'a> fn(&'a animal::Animal) -> animal_individual::AnimalIndividual {animal_individual::AnimalIndividual::from_animal}: Individual

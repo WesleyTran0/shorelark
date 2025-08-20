@@ -1,0 +1,1 @@
+std::iter::Map<std::slice::Iter<'_, lib_simulation::Food>, fn(Food) -> Food {<Food as std::convert::From<Food>>::from}>
